@@ -23,7 +23,7 @@ def create_app()-> FastAPI:
     register_error_handlers(app)
     logger.info("app start complete")
 
-    app.add_api_route(chunk_route.route,prefix="/api")
+    app.include_router(chunk_route.route,prefix="/api")
 
     return app
 

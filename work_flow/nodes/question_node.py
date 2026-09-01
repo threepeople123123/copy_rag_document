@@ -2,13 +2,13 @@ from pydantic import Field, BaseModel
 
 from llm.models import get_agent, get_chat_model
 from llm.prompts import build_question_message
-from work_flow.copy_rag_document_state import CopyRagDocumentState, route_choose
+from work_flow.copy_rag_document_state import CopyRagDocumentState, question_choose
 
 
 class QuestionDiverse(BaseModel):
 
     # 路由选择
-    question_type : route_choose = Field(..., description="路由选择，multi_channel_recall,assistant_false_answer,original")
+    question_type : question_choose = Field(..., description="路由选择，multi_channel_recall,assistant_false_answer,original")
 
     # ai生成的路由召回问题
     multi_channel_recall:list[str] = Field(..., description="生成多角度提问的回答")

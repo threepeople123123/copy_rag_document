@@ -25,19 +25,22 @@ class Setting(BaseSettings):
     date_source_url:str= ""
     log_lever:str = ""
     app_name:str = ""
+    bucket_name:str = "default"
 
     rabbit_mq_host:str = ""
     rabbit_mq_port:int = 0
-    rabbit_mq_username:int = 0
-    rabbit_mq_password:int = 0
+    rabbit_mq_username:str = ""
+    rabbit_mq_password:str = ""
 
-    embedding_api_key:str = "sk-0363d3e4787e4ab19253e56309e0ff95"
+    embedding_api_key:str = ""
     # aliyun最新根据业务空间id调用，猜测是为了分流和最近节点的服务器，更快
-    embedding_base_url:str = "https://llm-3l2i84ztuewo30qg.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-    embedding_model_name:str = "qwen3.7-text-embedding"
+    embedding_base_url:str = ""
+    embedding_model_name:str = ""
     embedding_dimensions:int = 1024
     chunk_size:int = 600
     chunk_overlap:int = 60
+
+    vector_score:float=0.6
 
 
 

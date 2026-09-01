@@ -3,11 +3,6 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from work_flow.copy_rag_document_state import Message, MessageRole
 
-SYSTEM_ROUTE_PROMPT="""
-    
-"""
-
-
 
 #
 _SYSTEM_REWRITE_PROMPT ="""
@@ -195,17 +190,6 @@ def build_rewrite_message(question:str,history:list[Message]):
             "chat_history":history_to_message(history)
          }
     )
-
-
-
-
-
-
-
-
-
-
-
 
 
 #
@@ -622,3 +606,270 @@ def history_to_message(history:list[Message]) ->list[BaseMessage]:
         if msg.role == MessageRole.SYSTEM:
             messages.append(SystemMessage(content=msg.content))
     return messages
+
+
+_SYSTEM_ROUTE_PROMPT = """
+
+        你是一个 OA（办公自动化）系统的意图路由节点。
+
+        你的任务是根据「用户当前问题」以及「历史对话上下文」，判断用户当前请求属于以下哪一种意图，并将请求路由到对应的处理流程。
+
+        可选意图只有以下三种：
+
+        * small_talk：闲聊 / 非 OA 业务问题
+        * rules_regulations：规章制度 / 管理规定查询
+        * work_flow：业务流程 / 办事流程查询
+
+        ## 一、small_talk：闲聊 / 非 OA 业务问题
+
+        用户的问题与 OA 系统业务无关，不涉及公司制度、管理规定、办公业务流程，也不需要从企业知识库中检索相关内容。
+
+        典型情况：
+
+        * 日常闲聊
+        * 打招呼
+        * 天气、娱乐、生活、常识等与 OA 业务无关的问题
+        * 与公司制度和办公流程完全无关的技术或知识问题
+        * 简单的感谢、确认、结束对话等
+
+        例如：
+
+        * 你好
+        * 你是谁
+        * 今天天气怎么样
+        * 帮我讲个笑话
+        * Java 中 HashMap 是怎么实现的
+        * 谢谢
+        * 好的
+
+        注意：
+        只要用户的问题涉及公司制度、员工管理规定、办公业务办理方式，即使表达非常口语化，也不能归类为 small_talk。
+
+        ---
+
+        ## 二、rules_regulations：规章制度 / 管理规定查询
+
+        用户想了解的是公司已经制定的「制度、规定、标准、政策、管理办法、适用条件、资格要求、额度、天数、比例、限制条件」等内容。
+
+        这类问题的核心是：
+
+        **“公司规定是什么？”**
+
+        常见主题包括但不限于：
+
+        * 年假、事假、病假、婚假、产假等假期制度
+        * 考勤制度
+        * 加班制度
+        * 出差补贴标准
+        * 住宿标准
+        * 交通标准
+        * 薪酬福利相关规定
+        * 报销标准
+        * 采购管理规定
+        * 用章制度
+        * 财务管理制度
+        * 员工管理规定
+        * 各类费用额度、标准、比例、资格和限制
+        * 某项制度适用于什么人员、什么条件
+
+        例如：
+
+        * 公司年假有多少天？
+        * 年假怎么计算？
+        * 出差住宿标准是多少？
+        * 出差一天有多少补贴？
+        * 什么情况下可以申请病假？
+        * 报销可以报销多少？
+        * 哪些费用不能报销？
+        * 员工出差交通工具有什么标准？
+
+        判断重点：
+
+        如果用户主要是在询问**公司规定、标准、额度、资格、条件、限制**，优先选择 rules_regulations。
+
+        ---
+
+        ## 三、work_flow：业务流程 / 办事流程查询
+
+        用户想知道的是某项 OA 业务「具体应该怎么操作、按照什么步骤办理、需要经过哪些审批、提交什么材料、由谁审批、下一步做什么」。
+
+        这类问题的核心是：
+
+        **“这件事情应该怎么办？”**
+
+        常见主题包括但不限于：
+
+        * 出差申请流程
+        * 出差审批流程
+        * 报销流程
+        * 采购流程
+        * 请假流程
+        * 加班申请流程
+        * 合同审批流程
+        * 用章流程
+        * 付款流程
+        * 借款流程
+        * 入职 / 离职流程
+        * 费用申请流程
+        * 各类 OA 审批流程
+        * 流程节点、审批人、审批顺序、申请入口
+        * 不同金额对应的审批流程
+
+        例如：
+
+        * 出差流程怎么走？
+        * 我要出差应该先申请什么？
+        * 报销需要经过哪些审批？
+        * 采购申请怎么提交？
+        * 采购需要哪些审批？
+        * 费用报销提交以后谁审批？
+        * 重大报销和普通报销分别怎么走？
+        * 10 万元以上的采购需要走什么流程？
+        * 这个申请下一步应该找谁审批？
+
+        判断重点：
+
+        如果用户主要是在询问**办理步骤、审批链路、操作方式、流程节点、申请入口或下一步怎么做**，优先选择 work_flow。
+
+        ---
+
+        ## 四、制度与流程的区分规则
+
+        当问题同时涉及制度和流程时，根据用户的**主要意图**进行判断。
+
+        ### 更关注“规定是什么” → rules_regulations
+
+        例如：
+
+        “年假有多少天？”
+        → rules_regulations
+
+        “出差住宿一天最多能报多少？”
+        → rules_regulations
+
+        “什么情况下可以走重大报销？”
+        → rules_regulations
+
+        “采购金额达到多少需要特殊审批？”
+        → rules_regulations
+
+        ### 更关注“应该怎么操作” → work_flow
+
+        例如：
+
+        “出差流程怎么走？”
+        → work_flow
+
+        “报销需要经过哪些审批？”
+        → work_flow
+
+        “采购申请怎么提交？”
+        → work_flow
+
+        “重大报销怎么申请？”
+        → work_flow
+
+        ### 同时包含制度和流程时
+
+        如果用户询问的是：
+
+        **“不同条件对应什么办理路径”**
+
+        例如：
+
+        * “报销金额多少走普通报销，多少走重大报销？”
+        * “采购金额超过多少需要走什么审批流程？”
+
+        这类问题虽然包含金额、标准等制度信息，但用户最终目的是判断**应该走哪条业务流程**，因此归类为：
+
+        work_flow
+
+        如果用户只是询问标准本身，例如：
+
+        “重大报销的金额标准是多少？”
+
+        则归类为：
+
+        rules_regulations。
+
+        ---
+
+        ## 五、上下文判断
+
+        必须结合历史对话判断用户真实意图。
+
+        如果当前问题存在上下文指代，例如：
+
+        * “那这个怎么申请？”
+        * “这个需要审批吗？”
+        * “多少金额？”
+        * “那普通的呢？”
+        * “还有其他要求吗？”
+        * “怎么走？”
+
+        需要结合之前的对话确定用户正在询问的业务。
+
+        例如：
+
+        用户：公司采购制度中，采购金额有什么要求？
+        助手：……
+
+        用户：那超过 10 万怎么走？
+
+        当前问题虽然很短，但结合上下文可以确定用户是在询问采购审批流程，因此应判断为：
+
+        work_flow
+
+        如果无法从上下文确定用户具体指向，但可以确定是在询问 OA 业务，则根据当前问题最明显的意图进行分类，不要因为信息不完整而归类为 small_talk。
+
+        ---
+
+        ## 六、优先级判断
+
+        当一个问题同时包含多个意图时，按照以下优先级判断：
+
+        1. 如果用户主要询问具体业务的办理步骤、审批节点、操作方式、流程路径 → work_flow
+        2. 如果用户主要询问公司制度、规定、标准、额度、天数、资格、条件、限制 → rules_regulations
+        3. 如果与 OA、公司制度、办公业务均无关 → small_talk
+
+        特别注意：
+
+        不要仅根据关键词判断。
+
+        例如：
+
+        “出差多少钱可以报销？”
+        → 重点是报销标准 → rules_regulations
+
+        “出差报销怎么走？”
+        → 重点是办理流程 → work_flow
+
+        “出差超过多少钱需要走特殊审批？”
+        → 重点是根据金额判断审批路径 → work_flow
+
+        “出差补贴标准是多少？”
+        → 重点是制度标准 → rules_regulations
+
+
+"""
+_USER_ROUTE_PROMPT = """
+    {question}
+"""
+
+
+route_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system",_SYSTEM_ROUTE_PROMPT),
+        MessagesPlaceholder("chat_history", optional=True),
+        ("human",_USER_ROUTE_PROMPT)
+    ]
+)
+
+def build_route_message(question:str,history:list[Message])->list[BaseMessage]:
+    prompt_value = route_prompt.invoke(
+        {
+            "question":question,
+            "chat_history":history_to_message(history),
+        }
+    )
+    return list(prompt_value.to_messages())

@@ -8,6 +8,8 @@ from fastapi import UploadFile
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
+from core.exceptions import AppException
 from core.logging import get_logger
 from db.models import DocumentChunk, Document
 from llm.models import get_embeddings
@@ -39,15 +41,20 @@ class ChunkService:
         if (suffix not in ALLOWED_SUFFIX.values()) or (content_type not in ALLOWED_SUFFIX.keys()) :
             raise ValidationErr(f"当前不支持：{suffix} 类型的文件")
 
-        # 1. 创建临时文件
+        content = await file.read()
+        # content 在写入临时文件前已读过一次,这里不能再读(流已耗尽)
+        file_hash = hashlib.sha256(content).hexdigest()
+
+        document_repo = DocumentRepo(session=self.session)
+        document_exist = await document_repo.get_document_by_file_hash(file_hash)
+        if document_exist:
+            raise AppException(message=f"已经存在相同的文件,{file.filename},请换文件重新上传")
+
+        #  创建临时文件
         with NamedTemporaryFile(
                 suffix=suffix,
                 delete=False
         ) as temp_file:
-
-            # 2. 读取 UploadFile
-            content = await file.read()
-
             # 3. 写入临时文件
             temp_file.write(content)
             temp_file.flush()
@@ -55,31 +62,23 @@ class ChunkService:
             temp_path = Path(temp_file.name)
 
         try:
-            # 4. 创建 Docling Converter
+            #  创建 Docling Converter
             converter = DocumentConverter()
 
-            # 5. 转换文件
+            #  转换文件
             result = converter.convert(temp_path)
-
-            # 6. 转换成 Markdown
+            #  转换成 Markdown
             markdown = result.document.export_to_markdown()
-
-            content = await file.read()
-
-            file_hash = hashlib.sha256(content).hexdigest()
-
             document = Document(
                 title=file.filename,
                 file_hash=file_hash,
                 content_type=content_type,
                 size=len(content),
+                bucket_name=settings.bucket_name,
             )
 
             # 插入document文档
-            document_repo = DocumentRepo(session=self.session)
             await document_repo.add_document(document)
-            await self.session.commit()
-            await self.session.refresh(document)
 
             document_list = await split(markdown, file.filename)
 
@@ -101,11 +100,14 @@ class ChunkService:
 
             chunk_repo = ChunkRepo(self.session)
             await chunk_repo.add_chunk(document_chunks)
+
+            # 文档 + 所有 chunk 一次性提交;任一步失败都会整体回滚,避免留下孤儿文档
             await self.session.commit()
             await self.session.refresh(document)
 
             return document
         except Exception as e:
+            await self.session.rollback()
             logger.error(f"解析失败{e}")
             raise ValidationErr(f"解析失败{e}")
 

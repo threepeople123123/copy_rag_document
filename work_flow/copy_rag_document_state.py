@@ -2,9 +2,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, TypedDict
 
+from search.search import RetrieveChunk
+
 intent_choose=Literal["small_talk","rules_regulations","work_flow"]
 
-route_choose=Literal["multi_channel_recall","assistant_false_answer","original"]
+question_choose=Literal["multi_channel_recall","assistant_false_answer","original"]
 
 
 class MessageRole(Enum):
@@ -26,7 +28,7 @@ class Message:
 class CopyRagDocumentState(TypedDict,total=False):
 
     # 路由，查看是否需要重写，多路召回，ai假写，或者原始问题不用动
-    question_route:route_choose
+    question_route:question_choose
 
     # 意图识别，查看是否是闲聊，或者流程查询，还是规章制度查询
     intent:intent_choose
@@ -52,7 +54,8 @@ class CopyRagDocumentState(TypedDict,total=False):
     # ai虚假回答
     assistant_false_answer:str
 
-
+    # 检索到的文档
+    retrieve:list[RetrieveChunk]
 
 
 

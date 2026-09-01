@@ -43,7 +43,7 @@ def get_embeddings()->Embeddings:
     global _embeddings
     if _embeddings is not None:
         return _embeddings
-    if not settings.EMBEDDING_API_KEY:
+    if not settings.embedding_api_key:
         raise ValidationErr(code="api_key is null",message="向量 api_key 没有配置")
     _embeddings =  OpenAIEmbeddings(
         model=settings.embedding_model_name,
