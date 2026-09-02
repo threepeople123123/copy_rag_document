@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm.models import get_embeddings
 from repositories.chunk_repo import ChunkRepo
-from search.search import RetrieveChunk
+from search.models import RetrieveChunk
 
 
 class VectorRetrieve:

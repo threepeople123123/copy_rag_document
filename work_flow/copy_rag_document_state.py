@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, TypedDict
+from uuid import UUID
 
-from search.search import RetrieveChunk
+from pydantic import BaseModel
+
+from search.models import RetrieveChunk
 
 intent_choose=Literal["small_talk","rules_regulations","work_flow"]
 
@@ -24,6 +27,13 @@ class Message:
     content:str
 
 
+@dataclass
+class PlanReason(BaseModel):
+    count:int
+
+    reason:str
+
+
 
 class CopyRagDocumentState(TypedDict,total=False):
 
@@ -37,7 +47,7 @@ class CopyRagDocumentState(TypedDict,total=False):
     history:list[Message]
 
     # 会话id
-    conversation_id:str
+    conversation_id:UUID
 
     # 用户问题
     question:str
@@ -57,9 +67,14 @@ class CopyRagDocumentState(TypedDict,total=False):
     # 检索到的文档
     retrieve:list[RetrieveChunk]
 
+    # 文档检索相关性打分
+    relevance_score:float|None
 
+    # 文档打分说明
+    relevance_reason:str
 
+    # 循环次数
+    cycle_count:int
 
-
-
-
+    # 循环说明，第几次，为什么重复循环
+    plan_reasons:list[PlanReason]

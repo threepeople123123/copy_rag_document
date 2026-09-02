@@ -12,14 +12,17 @@ class RouteEnum(BaseModel):
     route:str=Field(..., description="根据用户问题，进行判断，智能返回三种数据：small_talk,rules_regulations,work_flow")
 
 
-async def route_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def intent_node(state:CopyRagDocumentState)->CopyRagDocumentState:
     question_rewrite = state["question_rewrite"]
 
-    history = state["history"]
+    history = state.get("history", [])
 
     messages = build_route_message(question_rewrite,history)
 
     model_with_structure = get_chat_model().with_structured_output(RouteEnum)
     response = await model_with_structure.ainvoke(messages)
 
-    return {"intent":response.route}
+    replace_after = response.route.replace('"', '')
+    route = replace_after.replace("'", '')
+
+    return {"intent":route}

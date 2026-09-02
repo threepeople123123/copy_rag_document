@@ -16,7 +16,7 @@ class Setting(BaseSettings):
         case_sensitive=False,
     )
 
-    base_url:str = ""
+    chat_base_url:str = ""
     api_key:str = ""
     max_model:str = ""
     min_model:str = ""
@@ -41,6 +41,12 @@ class Setting(BaseSettings):
     chunk_overlap:int = 60
 
     vector_score:float=0.6
+
+    redis_host:str = ""
+    redis_password:str =""
+    redis_port:int = 6379
+    redis_db:int = 2
+    redis_max_connections:int = 10
 
 
 

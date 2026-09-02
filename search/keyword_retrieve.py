@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.chunk_repo import ChunkRepo
-from search.search import RetrieveChunk
+from search.models import RetrieveChunk
 
 
 class KeyWordRetrieve:

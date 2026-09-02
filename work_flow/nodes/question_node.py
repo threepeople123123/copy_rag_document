@@ -19,7 +19,7 @@ class QuestionDiverse(BaseModel):
     # ai虚拟回答进行召回
     assistant_false_answer:str = Field(..., description="llm生成的答案")
 
-async def route_nodes(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def question_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
 
     question_rewrite = state["question_rewrite"]

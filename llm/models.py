@@ -20,7 +20,7 @@ def get_chat_model():
         temperature=0.1,
         max_tokens=1000,
         timeout=30,
-        base_url=settings.base_url,
+        base_url=settings.chat_base_url,
         api_key=settings.api_key
         # ...（其他参数）
     )

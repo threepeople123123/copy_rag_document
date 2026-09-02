@@ -16,6 +16,7 @@ dependencies = [
     "pika>=1.4.4",
     "pydantic-settings>=2.15.0",
     "python-multipart>=0.0.20",
+    "redis>=8.1.0",
     "sqlalchemy>=2.0.52",
     "uvicorn>=0.52.4",
 ]

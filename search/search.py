@@ -1,34 +1,25 @@
 import asyncio
-from dataclasses import dataclass
 from uuid import UUID
 
 from core.config import settings
 from core.logging import get_logger
 from db.session import AsyncSessionLocal
 from search.keyword_retrieve import KeyWordRetrieve
+from search.models import RetrieveChunk
 from search.vectroy_retrieve import VectorRetrieve
-from work_flow.copy_rag_document_state import CopyRagDocumentState
 
 logger = get_logger(__name__)
-@dataclass
-class RetrieveChunk:
-    # 内容
-    chunk_id: UUID
-    document_id: UUID
-    content:str
-    vector_rank: int | None = None
-    vector_score: float | None = None  # 原始 cosine similarity（向量路命中时填充）
-    keyword_rank: int | None = None
-    keyword_score: float | None = None  # 原始 ts_rank（关键词路命中时填充）
-    rrf_score: float | None = None
-    rerank_score: float | None = None
 
 
-def rrf_rank(keyword:list[RetrieveChunk], vector:list[RetrieveChunk], top_k:int)->list[RetrieveChunk]:
-    keyword_rank_map: dict[UUID, RetrieveChunk] = {
-        chunk.chunk_id: chunk
-        for chunk in keyword
-    }
+def rrf_rank(keyword:list[RetrieveChunk] | None, vector:list[RetrieveChunk] | None, top_k:int)->list[RetrieveChunk]:
+    if vector is None:
+        return []
+    keyword_rank_map:dict[UUID, RetrieveChunk] ={}
+    if keyword :
+        keyword_rank_map: dict[UUID, RetrieveChunk] = {
+            chunk.chunk_id: chunk
+            for chunk in keyword
+        }
     rrf_result:list[RetrieveChunk] = []
     for v in vector:
         if v.vector_score >= (settings.vector_score or 0.0):
@@ -48,7 +39,7 @@ class Search:
         try:
             async with AsyncSessionLocal() as session:
                 retriever = search_cls(session)
-                result = retriever.search(question,top_k)
+                result = await retriever.search(question,top_k)
                 return result
         except Exception as e:
             logger.error(f"查询{label}报错，报错原因：{e}")

@@ -1,14 +1,15 @@
 from uuid import UUID
 
-from search.search import Search, RetrieveChunk
+from search.models import RetrieveChunk
+from search.search import Search
 from work_flow.copy_rag_document_state import CopyRagDocumentState
 
 
 async def retrieve_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     question_route = state["question_route"]
-    multi_channel_recall = state["multi_channel_recall"]
-    assistant_false_answer = state["assistant_false_answer"]
+    multi_channel_recall = state.get("multi_channel_recall",[])
+    assistant_false_answer = state.get("assistant_false_answer","")
     question_rewrite = state.get("question_rewrite",state["question"])
 
     search = Search()

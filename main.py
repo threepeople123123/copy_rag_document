@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from api.routes import chunk_route
+from api.routes import chunk_route, chat_route
 from core.config import settings
 from core.logging import configure_logging, get_logger
 from handler.error_handler import register_error_handlers
@@ -24,6 +24,7 @@ def create_app()-> FastAPI:
     logger.info("app start complete")
 
     app.include_router(chunk_route.route,prefix="/api")
+    app.include_router(chat_route.route,prefix="/api")
 
     return app
 
