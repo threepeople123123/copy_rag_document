@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
 from core.exceptions import AppException
 from core.logging import get_logger
-from db.models import DocumentChunk, Document
+from db.models import DocumentChunk, Document, DocumentStatus
 from llm.models import get_embeddings
 from repositories.chunk_repo import ChunkRepo
 from repositories.document_repo import DocumentRepo
@@ -100,6 +100,7 @@ class ChunkService:
 
             chunk_repo = ChunkRepo(self.session)
             await chunk_repo.add_chunk(document_chunks)
+            await document_repo.update_state(document,DocumentStatus.READY,None)
 
             # 文档 + 所有 chunk 一次性提交;任一步失败都会整体回滚,避免留下孤儿文档
             await self.session.commit()
@@ -110,6 +111,7 @@ class ChunkService:
             await self.session.rollback()
             logger.error(f"解析失败{e}")
             raise ValidationErr(f"解析失败{e}")
+
 
         finally:
             # 7. 删除临时文件

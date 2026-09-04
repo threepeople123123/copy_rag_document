@@ -1,6 +1,7 @@
 from pydantic import Field, BaseModel
 
-from llm.models import get_agent, get_chat_model
+from core.langfuse import langfuse_client, send_message_to_langfuse
+from llm.models import get_structured_agent
 from llm.prompts import build_question_message
 from work_flow.copy_rag_document_state import CopyRagDocumentState, question_choose
 
@@ -27,11 +28,22 @@ async def question_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     message = build_question_message(question_rewrite,history)
 
-    model_with_structure  = get_chat_model().with_structured_output(QuestionDiverse)
+    trace_id = state["trace_id"]
+    # 重写后问题
 
-    question_diverse = await model_with_structure.ainvoke(message)
+    input_message:dict = {}
+    output_message:dict = {}
+
+    # 结构化agent
+    agent_with_structure = get_structured_agent(QuestionDiverse)
+    result = await agent_with_structure.ainvoke({
+        "messages": message,
+    })
+    question_diverse = result["structured_response"]
 
     update : CopyRagDocumentState = {"question_route":"original"}
+
+    input_message={"question": question_rewrite}
 
     if question_diverse.question_type ==  "multi_channel_recall":
 
@@ -39,10 +51,16 @@ async def question_node(state:CopyRagDocumentState)->CopyRagDocumentState:
         update["multi_channel_recall"] = multi_channel_recall
         update["question_route"] = "multi_channel_recall"
 
+        output_message={"question_route":"multi_channel_recall","ai_generate": multi_channel_recall}
+
     elif question_diverse.question_type ==  "assistant_false_answer":
 
         assistant_false_answer = question_diverse.assistant_false_answer
         update["assistant_false_answer"] = assistant_false_answer
         update["question_route"] = "assistant_false_answer"
+
+        output_message={"question_route":"assistant_false_answer","ai_generate": assistant_false_answer}
+    # 发送langfuse消息
+    await send_message_to_langfuse(trace_id,__name__,input_message,output_message)
 
     return update

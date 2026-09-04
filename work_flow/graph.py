@@ -19,10 +19,20 @@ def _after_intent_node(state:CopyRagDocumentState)->str:
 
 
 def _after_relevance_node(state: CopyRagDocumentState) -> str:
-    cycle_count = state["cycle_count"]
+    cycle_count = state.get("cycle_count",1)
+    relevance_score = state.get("relevance_score",0.0)
     if cycle_count > 3:
         return "end"
-    return "retrieve_node"
+    elif relevance_score == 0.0 or relevance_score > 0.6:
+        return "end"
+    return "plan_node"
+
+def _after_retrieve_node(state: CopyRagDocumentState)->str:
+    retrieve = state.get("retrieve",[])
+    if retrieve == []:
+        return "relevance_node"
+    return "relevance_node"
+
 
 
 
@@ -44,11 +54,16 @@ def _build_graph():
                                   {"end":END,"question_node":"question_node"}
     )
     builder.add_edge("question_node","retrieve_node")
-    builder.add_edge("retrieve_node","relevance_node")
+    builder.add_conditional_edges("retrieve_node",
+                     _after_retrieve_node,
+                     {"end":END,"relevance_node":"relevance_node"}
+                     )
     builder.add_conditional_edges("relevance_node",
                                   _after_relevance_node,
-                                  {"end":END,"retrieve_node":"retrieve_node"}
+                                  {"end":END,"plan_node":"plan_node"}
     )
+    builder.add_edge("plan_node","retrieve_node")
+
 
     return builder.compile()
 

@@ -1,6 +1,8 @@
+from typing import Type
 from xml.dom import ValidationErr
 
 from langchain.agents import create_agent
+from langchain.agents.structured_output import ToolStrategy
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -54,4 +56,19 @@ def get_embeddings()->Embeddings:
         check_embedding_ctx_length=False
     )
     return _embeddings
+
+
+# schema -> agent 缓存(进程内,每个 schema 只编译一次)
+_structured_agents: dict[Type, CompiledStateGraph] = {}
+
+def get_structured_agent(schema: Type) -> CompiledStateGraph:
+    agent = _structured_agents.get(schema)
+    if agent is None:
+        agent = create_agent(
+            model=get_chat_model(),
+            response_format=ToolStrategy(schema),
+        )
+        _structured_agents[schema] = agent
+    return agent
+
 

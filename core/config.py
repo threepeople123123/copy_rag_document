@@ -47,6 +47,9 @@ class Setting(BaseSettings):
     redis_port:int = 6379
     redis_db:int = 2
     redis_max_connections:int = 10
+    langfuse_secret_key:str=""
+    langfuse_public_key:str=""
+    langfuse_base_url:str=""
 
 
 

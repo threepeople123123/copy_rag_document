@@ -1,8 +1,9 @@
 import json
 
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, TypeAdapter
 
-from llm.models import get_chat_model
+from core.langfuse import send_message_to_langfuse
+from llm.models import get_structured_agent
 from llm.prompts import build_plan_prompt
 from work_flow.copy_rag_document_state import CopyRagDocumentState, PlanReason, intent_choose, question_choose
 
@@ -32,7 +33,10 @@ async def plan_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     history = state.get("history", [])
 
+    trace_id = state["trace_id"]
+
     reason = build_plan_reason(state)
+
 
     plan_reasons.append(PlanReason(count=cycle_count,reason=reason))
 
@@ -40,9 +44,12 @@ async def plan_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     message = build_plan_prompt(plan_reason_json,history)
 
-    model_with_structure = get_chat_model().with_structured_output(PlanState)
+    agent_with_structure = get_structured_agent(PlanState)
+    result = await agent_with_structure.ainvoke({
+        "messages":message,
+    })
 
-    plan_state_result = await model_with_structure.ainvoke(message)
+    plan_state_result = result["structured_response"]
 
     update:CopyRagDocumentState = {"cycle_count":cycle_count,"plan_reasons":plan_reasons}
 
@@ -54,6 +61,20 @@ async def plan_node(state:CopyRagDocumentState)->CopyRagDocumentState:
     update["assistant_false_answer"] = plan_state_result.assistant_false_answer
     update["question_route"] = plan_state_result.question_route
     update["intent"] = plan_state_result.intent
+
+
+    json_str = json.dumps(plan_reasons, ensure_ascii=False, indent=4)
+    input_message:dict = {"plan_reasons":json_str}
+    output_message:dict = {
+        "question_rewrite":plan_state_result.question_rewrite,
+        "multi_channel_recall":plan_state_result.multi_channel_recall,
+        "assistant_false_answer":plan_state_result.assistant_false_answer,
+        "question_route":plan_state_result.question_route,
+        "intent":plan_state_result.intent,
+    }
+
+    # 发送langfuse消息
+    await send_message_to_langfuse(trace_id,"plan_node",input_message,output_message,"chain")
 
     return update
 

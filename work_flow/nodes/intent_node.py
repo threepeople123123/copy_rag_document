@@ -1,8 +1,9 @@
-from enum import Enum
+from pydantic import BaseModel, Field
 
 from pydantic import BaseModel, Field
 
-from llm.models import get_chat_model
+from core.langfuse import send_message_to_langfuse
+from llm.models import get_structured_agent
 from llm.prompts import build_route_message
 from work_flow.copy_rag_document_state import CopyRagDocumentState
 
@@ -17,12 +18,20 @@ async def intent_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     history = state.get("history", [])
 
+    trace_id = state["trace_id"]
+
     messages = build_route_message(question_rewrite,history)
 
-    model_with_structure = get_chat_model().with_structured_output(RouteEnum)
-    response = await model_with_structure.ainvoke(messages)
+    agent_with_structure = get_structured_agent(RouteEnum)
+    result = await agent_with_structure.ainvoke({
+        "messages": messages,
+    })
+    question_diverse = result["structured_response"]
 
-    replace_after = response.route.replace('"', '')
-    route = replace_after.replace("'", '')
+    replace_after = question_diverse.route.replace('"', '')
+    intent = replace_after.replace("'", '')
 
-    return {"intent":route}
+    # 发送langfuse消息
+    await send_message_to_langfuse(trace_id,"intent_node",{"question_rewrite":question_rewrite},{"intent":intent},"evaluator")
+
+    return {"intent":intent}

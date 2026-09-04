@@ -469,9 +469,9 @@ _SYSTEM_QUESTION_PRMPT ="""
                 
                 ---
         
-        # 七、reson 生成要求
+        # 七、reason 生成要求
         
-        `reson` 用于解释本次路由选择原因。
+        `reason` 用于解释本次路由选择原因。
         
         必须简洁说明：
         
@@ -524,7 +524,7 @@ _SYSTEM_QUESTION_PRMPT ="""
         * `multi_channel_recall`：返回空列表 `[]`
         * `assistant_false_answer`：返回空字符串 `""`
         
-        `reson` 无论选择哪种路由都必须填写。
+        `reason` 无论选择哪种路由都必须填写。
         
         ---
         
@@ -556,6 +556,16 @@ _SYSTEM_QUESTION_PRMPT ="""
         
         
         请根据用户问题和历史对话进行判断，并按照结构化输出要求返回结果。
+        最终结果必须以纯 JSON 格式输出，不要使用 markdown 代码块。
+
+        # 十、输出字段要求（严格遵守，四个字段必须全部出现）
+
+        输出的 JSON 对象必须包含且仅包含以下 4 个字段：
+
+        * question_type：字符串，只能是 multi_channel_recall、assistant_false_answer、original 三者之一
+        * multi_channel_recall：字符串数组；当 question_type 为 multi_channel_recall 时填写多个检索问题，否则返回空数组
+        * assistant_false_answer：字符串；当 question_type 为 assistant_false_answer 时填写 AI 候选答案，否则返回空字符串
+        * reason：字符串，用一句话说明选择该路由的理由，任何情况下都必须填写
 
 """
 
@@ -853,6 +863,13 @@ _SYSTEM_ROUTE_PROMPT = """
         “出差补贴标准是多少？”
         → 重点是制度标准 → rules_regulations
 
+        ## 七、输出字段要求
+
+        输出的 JSON 对象中只包含一个字段：
+
+        * 字段名：route，字符串类型，取值只能是 small_talk、rules_regulations、work_flow 三者之一
+
+        最终结果必须以纯 JSON 格式输出，不要使用 markdown 代码块。
 
 """
 _USER_ROUTE_PROMPT = """
@@ -1041,10 +1058,14 @@ _SYSTEM_RELEVANCE_PROMPT = """
     
     不要仅根据关键词匹配程度打分。
     
-    检索结果：
-    {{context}}
-    
     请对检索结果进行相关性评估，并给出 0~1 之间的 relevance_score，以及简洁明确的评分理由。
+    最终结果必须以纯 JSON 格式输出，不要使用 markdown 代码块。
+    
+    检索结果：
+    {context}
+    
+    
+
 """
 
 _USER_RELEVANCE_PROMPT = """
@@ -1475,6 +1496,8 @@ _SYSTEM_PLAN_PROMPT="""
         重新判断用户意图，只能选择：
         
         small_talk / rules_regulations / work_flow
+
+        最终结果必须以纯 JSON 格式输出，不要使用 markdown 代码块。
 """
 
 _USER_PLAN_PROMPT ="""
@@ -1789,14 +1812,24 @@ _SYSTEM_OA_PROMPT= """
             9. 向用户暴露 RAG 检索过程。
             10. 在知识库没有依据时给出确定性结论。
             
+            ########################################################
+            
             ## 输入信息
             
-            用户意图：
-            {{intent}}
+            # 用户意图：
+            {intent}
             
-            知识库检索结果：
-            {{retrieval_results}}
+            ########################################################
             
+            # 知识库检索结果：
+            {context}
+            
+            
+           # 历史对话压缩：
+            {history_compress}
+            
+            
+            ########################################################
             请基于以上信息生成最终回答。
 """
 
@@ -1814,16 +1847,62 @@ oa_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-def build_oa_messages(intent:str,retrieval:list[RetrieveChunk],question:str,history:list[Message])->list[BaseMessage]:
+def build_oa_messages(intent:str,retrieval:list[RetrieveChunk],question:str,history:list[Message],history_compress:str="暂无")->list[BaseMessage]:
     # 注意:这里是同步模板填充,用 invoke 而不是 ainvoke,
     # 并且必须 return,否则调用方拿到 None
     prompt_value = oa_prompt.invoke(
         {
             "intent":intent,
             "question":question,
-            "retrieval_results":format_context(retrieval),
+            "context":format_context(retrieval),
+            "history_compress": history_compress,
             "chat_history":history_to_message(history)
         }
     )
     return list(prompt_value.to_messages())
 
+
+
+_SYSTEM_COMPRESS_PROMPT = """
+# 角色
+你是一个高效的信息压缩与记忆整合专家。你的任务是将“历史已压缩的上下文”与“当前新增的信息”进行深度融合，生成一份全新的、精简的压缩消息。
+
+
+# 核心压缩规则
+1. **去粗取精**：去除冗余的对话客套、重复的问答和临时性的过程细节。
+2. **保留关键状态**：
+   - 保留核心的业务逻辑、技术方案、代码进展和未解决的问题。
+   - 保留任何可能影响后续交互的关键事实。
+3. **✨ 铁律：严格保留用户约束**：
+   - 必须完整保留用户明确指定的限制条件、技术栈（如：Python）、角色设定（如：资深架构师）、输出格式要求等。绝对不能将这些约束信息压缩或遗漏掉。
+4. **时序整合**：将新信息合理地融入到历史脉络中，保持上下文的连贯性。
+
+# 输出格式
+请直接输出整合后的压缩内容，使用结构化、简明扼要的条目（Bullet Points）呈现，字数控制在合理范围内。
+"""
+
+_USER_COMPRESS_PROMPT = """
+
+# 输入数据
+1. 【历史压缩信息】：
+{history_compressed_info}
+
+2. 【当前新增信息】：
+{current_new_info}
+
+"""
+
+compress_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system",_SYSTEM_COMPRESS_PROMPT),
+        ("human",_USER_COMPRESS_PROMPT)
+    ]
+)
+
+def build_compress_messages(history_compressed_info:str,current_new_info)->list[BaseMessage]:
+    prompt_value = compress_prompt.invoke(
+        {
+            "history_compressed_info":history_compressed_info,
+            "current_new_info":current_new_info
+        })
+    return list(prompt_value.to_messages())

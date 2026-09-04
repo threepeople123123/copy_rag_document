@@ -29,6 +29,8 @@ def rrf_rank(keyword:list[RetrieveChunk] | None, vector:list[RetrieveChunk] | No
                 v.keyword_score = keyword.keyword_score
                 v.keyword_rank = keyword.keyword_rank
                 v.rrf_score = rrf_score
+            else:
+                v.rrf_score = 1 / (v.vector_rank + 60)
             rrf_result.append(v)
     return sorted(rrf_result,key=lambda rrf:rrf.rrf_score or 0.0, reverse=True)[:top_k]
 

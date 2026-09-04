@@ -78,3 +78,8 @@ class CopyRagDocumentState(TypedDict,total=False):
 
     # 循环说明，第几次，为什么重复循环
     plan_reasons:list[PlanReason]
+
+    trace_id:str
+
+    # 历史对话压缩
+    history_compress:str
