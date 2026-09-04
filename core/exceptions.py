@@ -12,3 +12,17 @@ class AppException(Exception):
         if code is not None:
             self.code = code
         super().__init__(self.message)
+
+
+class UnsupportedMediaTypeError(AppException):
+    """文件类型不被支持（415）。"""
+    code: str = "unsupported_media_type"
+    message: str = "不支持的文件类型"
+    http_status: int = HTTPStatus.UNSUPPORTED_MEDIA_TYPE
+
+
+class ParseError(AppException):
+    """文档解析失败（422）。"""
+    code: str = "parse_error"
+    message: str = "文档解析失败"
+    http_status: int = HTTPStatus.UNPROCESSABLE_ENTITY

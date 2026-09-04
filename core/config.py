@@ -25,7 +25,7 @@ class Setting(BaseSettings):
     date_source_url:str= ""
     log_lever:str = ""
     app_name:str = ""
-    bucket_name:str = "default"
+
 
     rabbit_mq_host:str = ""
     rabbit_mq_port:int = 0
@@ -50,6 +50,14 @@ class Setting(BaseSettings):
     langfuse_secret_key:str=""
     langfuse_public_key:str=""
     langfuse_base_url:str=""
+
+    # minio配置：minio>=7.2 会自动按 secure 拼接 http(s):// 前缀，
+    # 所以 endpoint 只写 host:port，不能带 scheme，否则报 "path in endpoint is not allowed"
+    minio_endpoint:str = "8.140.219.233:9000"
+    minio_access_key:str = "minioadmin"
+    minio_secret_key:str = "minioadmin"
+    minio_secure:bool = False
+    bucket_name:str = ""
 
 
 

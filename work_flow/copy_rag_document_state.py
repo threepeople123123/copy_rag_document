@@ -16,6 +16,7 @@ class MessageRole(Enum):
     ASSISTANT = "assistant"
     USER = "user"
     SYSTEM = "system"
+    TOOL = "tool"
 
 
 
@@ -25,6 +26,8 @@ class Message:
     role:MessageRole
 
     content:str
+
+    tool_call_id:str
 
 
 @dataclass

@@ -1,7 +1,7 @@
 import hashlib
+from asyncio import to_thread
 from pathlib import PurePath, Path
 from tempfile import NamedTemporaryFile
-from xml.dom import ValidationErr
 
 from docling.document_converter import DocumentConverter
 from fastapi import UploadFile
@@ -9,12 +9,13 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
-from core.exceptions import AppException
+from core.exceptions import AppException, ParseError, UnsupportedMediaTypeError
 from core.logging import get_logger
 from db.models import DocumentChunk, Document, DocumentStatus
 from llm.models import get_embeddings
 from repositories.chunk_repo import ChunkRepo
 from repositories.document_repo import DocumentRepo
+from service.doc_converter import convert_doc_to_docx
 from splitter.splitter_document import split
 
 
@@ -39,7 +40,7 @@ class ChunkService:
         suffix = PurePath(file.filename or "").suffix
         content_type = file.content_type
         if (suffix not in ALLOWED_SUFFIX.values()) or (content_type not in ALLOWED_SUFFIX.keys()) :
-            raise ValidationErr(f"当前不支持：{suffix} 类型的文件")
+            raise UnsupportedMediaTypeError(message=f"当前不支持：{suffix} 类型的文件")
 
         content = await file.read()
         # content 在写入临时文件前已读过一次,这里不能再读(流已耗尽)
@@ -61,12 +62,17 @@ class ChunkService:
 
             temp_path = Path(temp_file.name)
 
+        parse_path = temp_path
         try:
+            # docling 无法直接解析二进制 .doc,需先转成 .docx(优先 Word COM,其次 LibreOffice)
+            if suffix == ".doc":
+                parse_path = await to_thread(convert_doc_to_docx, temp_path)
+
             #  创建 Docling Converter
             converter = DocumentConverter()
 
             #  转换文件
-            result = converter.convert(temp_path)
+            result = converter.convert(parse_path)
             #  转换成 Markdown
             markdown = result.document.export_to_markdown()
             document = Document(
@@ -107,16 +113,17 @@ class ChunkService:
             await self.session.refresh(document)
 
             return document
+        except AppException:
+            # 业务异常(如 .doc 转换失败、文件重复等)原样抛出,保留明确错误信息
+            await self.session.rollback()
+            raise
         except Exception as e:
             await self.session.rollback()
-            logger.error(f"解析失败{e}")
-            raise ValidationErr(f"解析失败{e}")
-
+            logger.exception("解析失败: %s", file.filename)
+            raise ParseError(message=f"解析失败:{(str(e)[:300])}")
 
         finally:
-            # 7. 删除临时文件
+            # 7. 删除临时文件(.doc 转换出的 .docx 一并清理)
             temp_path.unlink(missing_ok=True)
-
-
-
-
+            if parse_path != temp_path:
+                parse_path.unlink(missing_ok=True)

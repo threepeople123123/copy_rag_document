@@ -1,4 +1,4 @@
-from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from search.models import RetrieveChunk
@@ -605,6 +605,8 @@ def history_to_message(history:list[Message]) ->list[BaseMessage]:
             messages.append(HumanMessage(content=msg.content))
         if msg.role == MessageRole.SYSTEM:
             messages.append(SystemMessage(content=msg.content))
+        if msg.role == MessageRole.TOOL:
+            messages.append(ToolMessage(content=msg.content,tool_call_id=msg.tool_call_id))
     return messages
 
 

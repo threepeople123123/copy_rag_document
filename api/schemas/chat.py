@@ -18,3 +18,5 @@ class ChatRequest(BaseModel):
     # UUID 类型本身就会校验格式,加长度约束会报
     # "Unable to apply constraint 'min_length' to supplied value ..."
     conversation_id: UUID
+    # skill名称
+    skill:str
