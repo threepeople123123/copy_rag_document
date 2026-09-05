@@ -17,4 +17,4 @@ async def push_skill(session:DbSession,file:UploadFile=File(...,description="ski
         raise ValidationErr("请上传压缩包")
     service = file_service.FileService(session)
     await service.put_skill_by_zip(file)
-    return FileResponse("xip")
+    return FileResponse("m")

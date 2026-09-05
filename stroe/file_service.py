@@ -3,6 +3,7 @@ import zipfile
 from pathlib import Path
 from uuid import uuid4
 
+import frontmatter
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,9 +36,18 @@ class FileService:
                     file_content = file_obj.read()
                     name = Path(info.filename).name
                     if name == "SKILL.md":
-                        print(file_obj.name)
+                        name,description = parser_md(file_content)
+
                     await get_minio_client().put_object(build_skill_object_name(relative_path,prefix),file_content)
 
 
+def parser_md(file_content:bytes)->tuple[str,str]:
+    content_str = file_content.decode("utf-8")
+    post = frontmatter.loads(content_str)
+
+    # 获取 name 和描述
+    name = post.get("name")
+    description = post.get("description")
+    return str(name),str(description)
 def build_skill_object_name(file_name:str,prefix:str):
     return  f"skill/{prefix}+{file_name}"

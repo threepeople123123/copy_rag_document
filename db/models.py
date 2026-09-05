@@ -53,3 +53,11 @@ class DocumentChunk(Base):
 
     document: Mapped["Document"] = relationship(back_populates="chunks")
 
+class File(Base):
+    __tablename__ = "file"
+
+    id:Mapped[UUID] = mapped_column(UUID(as_uuid=True),default=uuid4,primary_key=True)
+    type:Mapped[str] = mapped_column(String(20),nullable=True)
+    object_name:Mapped[str] = mapped_column(String(400),nullable=False)
+    file_name:Mapped[str] =  mapped_column(String(50),nullable=False)
+    create_at :Mapped[datetime] = mapped_column(DateTime(timezone=True),default=func.now(),nullable=False)
