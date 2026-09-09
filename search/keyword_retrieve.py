@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.chunk_repo import ChunkRepo
+from db.repositories.chunk_repo import ChunkRepo
 from search.models import RetrieveChunk
 
 

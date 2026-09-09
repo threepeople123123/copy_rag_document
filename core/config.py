@@ -19,6 +19,7 @@ class Setting(BaseSettings):
     chat_base_url:str = ""
     api_key:str = ""
     max_model:str = ""
+    qwen3_8_max:str=""
     min_model:str = ""
     embedding_model:str = ""
 

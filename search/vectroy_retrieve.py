@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm.models import get_embeddings
-from repositories.chunk_repo import ChunkRepo
+from db.repositories.chunk_repo import ChunkRepo
 from search.models import RetrieveChunk
 
 

@@ -1,8 +1,9 @@
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 
 from search.models import RetrieveChunk
-from work_flow.copy_rag_document_state import Message, MessageRole
+from work_flow.rag_graph.copy_rag_document_state import Message
+from work_flow.schemas.graph_schemas import MessageRole
 
 #
 _SYSTEM_REWRITE_PROMPT ="""
@@ -1908,3 +1909,65 @@ def build_compress_messages(history_compressed_info:str,current_new_info)->list[
             "current_new_info":current_new_info
         })
     return list(prompt_value.to_messages())
+
+
+_SYSTEM_SKILL_PROMPT = """
+    # 角色设定
+    你是一个专业识别图片的助手
+"""
+
+_USER_SKILL_PROMPT = """
+
+    #下面是用户的提问：
+    {question}
+
+"""
+
+skill_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system",_SYSTEM_SKILL_PROMPT),
+        (MessagesPlaceholder("chat_history",optional=True))
+    ]
+)
+
+def build_skill_messages(question:str,history:list[Message],history_compress:str,file_type:str|None = None,mini_type:str|None = None,file_base64:str|None = None)->list[BaseMessage]:
+    prompt_value = skill_prompt.invoke({
+        "history_compress":history_compress,
+        "chat_history":history_to_message(history)
+    })
+    messages = prompt_value.to_messages()
+
+    # 格式化用户信息
+    user_prompt = PromptTemplate.from_template(_USER_SKILL_PROMPT).format(
+        question=question,
+    )
+    messages.append(build_user_message(question=user_prompt,file_type=file_type,mini_type=mini_type,file_base64=file_base64))
+    return messages
+
+
+def build_user_message(question:str,file_type:str|None = None,mini_type:str|None = None,file_base64:str|None = None)->HumanMessage:
+    """构造多模态 HumanMessage（OpenAI 兼容格式）。
+
+    content 必须是内容块数组，不能 json.dumps 成字符串——否则 langchain-openai
+    会把整段 JSON 当纯文本发给模型，图片无法被识别。
+
+    图片块固定用 OpenAI 的 image_url 结构，base64 以 data URL 形式给出：
+        {"type": "image_url", "image_url": {"url": "data:<mime>;base64,<base64>"}}
+    file_type 只作为「是否附带图片」的开关，具体类型由 mini_type（MIME）决定。
+    """
+    content:list[dict] = []
+
+    if question:
+        content.append({"type":"text","text":question})
+
+    if file_type and mini_type and file_base64:
+        content.append({
+            "type":"image_url",
+            "image_url":{
+                "url": f"data:{mini_type};base64,{file_base64}",
+            },
+        })
+
+    return HumanMessage(content=content)
+
+

@@ -5,16 +5,15 @@ from tempfile import NamedTemporaryFile
 
 from docling.document_converter import DocumentConverter
 from fastapi import UploadFile
-from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.exceptions import AppException, ParseError, UnsupportedMediaTypeError
 from core.logging import get_logger
 from db.models import DocumentChunk, Document, DocumentStatus
+from db.repositories.chunk_repo import ChunkRepo
 from llm.models import get_embeddings
-from repositories.chunk_repo import ChunkRepo
-from repositories.document_repo import DocumentRepo
+from db.repositories.document_repo import DocumentRepo
 from service.doc_converter import convert_doc_to_docx
 from splitter.splitter_document import split
 

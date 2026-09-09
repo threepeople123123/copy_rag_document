@@ -1,9 +1,9 @@
 from pydantic import Field, BaseModel
 
-from core.langfuse import langfuse_client, send_message_to_langfuse
+from core.langfuse import send_message_to_langfuse
 from llm.models import get_structured_agent
 from llm.prompts import build_question_message
-from work_flow.copy_rag_document_state import CopyRagDocumentState, question_choose
+from work_flow.rag_graph.copy_rag_document_state import RagDocumentState, question_choose
 
 
 class QuestionDiverse(BaseModel):
@@ -20,7 +20,7 @@ class QuestionDiverse(BaseModel):
     # ai虚拟回答进行召回
     assistant_false_answer:str = Field(..., description="llm生成的答案")
 
-async def question_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def question_node(state:RagDocumentState)->RagDocumentState:
 
 
     question_rewrite = state["question_rewrite"]
@@ -41,7 +41,7 @@ async def question_node(state:CopyRagDocumentState)->CopyRagDocumentState:
     })
     question_diverse = result["structured_response"]
 
-    update : CopyRagDocumentState = {"question_route":"original"}
+    update : RagDocumentState = {"question_route": "original"}
 
     input_message={"question": question_rewrite}
 

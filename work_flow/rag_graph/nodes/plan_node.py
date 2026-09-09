@@ -1,11 +1,11 @@
 import json
 
-from pydantic import Field, BaseModel, TypeAdapter
+from pydantic import Field, BaseModel
 
 from core.langfuse import send_message_to_langfuse
 from llm.models import get_structured_agent
 from llm.prompts import build_plan_prompt
-from work_flow.copy_rag_document_state import CopyRagDocumentState, PlanReason, intent_choose, question_choose
+from work_flow.rag_graph.copy_rag_document_state import RagDocumentState, PlanReason, intent_choose, question_choose
 
 
 class PlanState(BaseModel):
@@ -25,7 +25,7 @@ class PlanState(BaseModel):
     intent:intent_choose|None = Field(...,description="意图识别，查看是否是闲聊，或者流程查询，还是规章制度查询")
 
 
-async def plan_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def plan_node(state:RagDocumentState)->RagDocumentState:
     #
     cycle_count = state.get("cycle_count", 1)
 
@@ -51,7 +51,7 @@ async def plan_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     plan_state_result = result["structured_response"]
 
-    update:CopyRagDocumentState = {"cycle_count":cycle_count,"plan_reasons":plan_reasons}
+    update:RagDocumentState = {"cycle_count":cycle_count, "plan_reasons":plan_reasons}
 
     cycle_count = cycle_count + 1
 
@@ -79,7 +79,7 @@ async def plan_node(state:CopyRagDocumentState)->CopyRagDocumentState:
     return update
 
 
-def build_plan_reason(state:CopyRagDocumentState)->str:
+def build_plan_reason(state:RagDocumentState)->str:
 
     cycle_count = state.get("cycle_count", 1)
     question = state["question"]

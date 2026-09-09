@@ -1,14 +1,14 @@
 from uuid import uuid4
 
-from core.langfuse import langfuse_client, send_message_to_langfuse
+from core.langfuse import send_message_to_langfuse
 from llm.models import get_chat_model
 from llm.prompts import build_rewrite_message
-from work_flow.copy_rag_document_state import CopyRagDocumentState
+from work_flow.rag_graph.copy_rag_document_state import RagDocumentState
 
 
 
 
-async def rewrite_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def rewrite_node(state:RagDocumentState)->RagDocumentState:
     question = state["question"]
     history = state.get("history", [])
 
@@ -16,7 +16,7 @@ async def rewrite_node(state:CopyRagDocumentState)->CopyRagDocumentState:
 
     response = await get_chat_model().ainvoke(messages)
 
-    update:CopyRagDocumentState = {"question_rewrite":response.content}
+    update:RagDocumentState = {"question_rewrite":response.content}
 
     trace_id = state.get("trace_id",str(uuid4().hex))
 

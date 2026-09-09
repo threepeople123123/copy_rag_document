@@ -5,6 +5,7 @@ from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langgraph.graph.state import CompiledStateGraph
 
@@ -71,4 +72,37 @@ def get_structured_agent(schema: Type) -> CompiledStateGraph:
         _structured_agents[schema] = agent
     return agent
 
+# schema -> agent 缓存(进程内,每个 schema 只编译一次)
+_max_structured_agents: dict[Type, Runnable] = {}
+
+def get_max_structured_agent(schema: Type) -> Runnable:
+    agent = _max_structured_agents.get(schema)
+    if agent is None:
+        # 直接用 with_structured_output 做单次结构化调用，
+        # 避免 create_agent + ToolStrategy 的 agent 重试循环。
+        agent = get_chat_model_for_qwen3_8_max().with_structured_output(schema)
+        _max_structured_agents[schema] = agent
+    return agent
+
+_max_model: BaseChatModel | None = None
+
+def get_chat_model_for_qwen3_8_max():
+
+    global _max_model
+    if  _max_model is not None:
+        return _max_model
+    _max_model = ChatOpenAI(
+        model="qwen3.7-flash",
+        temperature=0.1,
+        max_tokens=100000,
+        # 生成完整测试用例（步骤 + 功能/边界/异常/安全四维）输出很长、很慢，
+        # 30s 会频繁超时，这里放宽到 5 分钟。
+        timeout=300,
+        max_retries=2,
+        base_url=settings.chat_base_url,
+        api_key=settings.api_key
+        # ...（其他参数）
+    )
+
+    return _max_model
 

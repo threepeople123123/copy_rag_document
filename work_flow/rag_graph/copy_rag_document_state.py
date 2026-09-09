@@ -6,28 +6,11 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from search.models import RetrieveChunk
+from work_flow.schemas.graph_schemas import Message
 
 intent_choose=Literal["small_talk","rules_regulations","work_flow"]
 
 question_choose=Literal["multi_channel_recall","assistant_false_answer","original"]
-
-
-class MessageRole(Enum):
-    ASSISTANT = "assistant"
-    USER = "user"
-    SYSTEM = "system"
-    TOOL = "tool"
-
-
-
-@dataclass
-class Message:
-
-    role:MessageRole
-
-    content:str
-
-    tool_call_id:str
 
 
 @dataclass
@@ -38,7 +21,7 @@ class PlanReason(BaseModel):
 
 
 
-class CopyRagDocumentState(TypedDict,total=False):
+class RagDocumentState(TypedDict, total=False):
 
     # 路由，查看是否需要重写，多路召回，ai假写，或者原始问题不用动
     question_route:question_choose
@@ -54,9 +37,6 @@ class CopyRagDocumentState(TypedDict,total=False):
 
     # 用户问题
     question:str
-
-    # ai 回答
-    assistant_answer:str
 
     # 问题重写
     question_rewrite:str

@@ -5,7 +5,7 @@ from pydantic import Field, BaseModel
 from core.langfuse import send_message_to_langfuse
 from llm.models import get_structured_agent
 from llm.prompts import build_relevance_messages
-from work_flow.copy_rag_document_state import CopyRagDocumentState
+from work_flow.rag_graph.copy_rag_document_state import RagDocumentState
 
 
 @dataclass
@@ -13,14 +13,14 @@ class Relevance(BaseModel):
     relevance_score: float= Field(..., description="打分字段赋值，如果低于")
     relevance_reason:str = Field(..., description="如此打分的理由")
 
-async def relevance_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def relevance_node(state:RagDocumentState)->RagDocumentState:
     intent = state["intent"]
     retrieve = state.get("retrieve",[])
     question_rewrite = state["question_rewrite"]
     history = state.get("history", [])
     trace_id = state["trace_id"]
 
-    update:CopyRagDocumentState = {}
+    update:RagDocumentState = {}
 
     # 规则查询或者流程查询，才会检查相关性，如果不是直接生成答案
     if intent =="rules_regulations" or intent == "work_flow":

@@ -57,7 +57,10 @@ class File(Base):
     __tablename__ = "file"
 
     id:Mapped[UUID] = mapped_column(UUID(as_uuid=True),default=uuid4,primary_key=True)
-    type:Mapped[str] = mapped_column(String(20),nullable=True)
+    file_name:Mapped[str]  = mapped_column(String(255),nullable=False)
+    skill_name:Mapped[str] = mapped_column(String(255),nullable=True)
+    skill_description:Mapped[str] = mapped_column(Text,nullable=True)
+    skill_prefix_path:Mapped[str] = mapped_column(String(255),nullable=True)
+    file_type:Mapped[str] = mapped_column(String(20),nullable=True)
     object_name:Mapped[str] = mapped_column(String(400),nullable=False)
-    file_name:Mapped[str] =  mapped_column(String(50),nullable=False)
     create_at :Mapped[datetime] = mapped_column(DateTime(timezone=True),default=func.now(),nullable=False)

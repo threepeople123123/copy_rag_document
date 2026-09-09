@@ -1,12 +1,12 @@
 from uuid import UUID
 
-from core.langfuse import langfuse_client, send_message_to_langfuse
+from core.langfuse import send_message_to_langfuse
 from search.models import RetrieveChunk
 from search.search import Search
-from work_flow.copy_rag_document_state import CopyRagDocumentState
+from work_flow.rag_graph.copy_rag_document_state import RagDocumentState
 
 
-async def retrieve_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def retrieve_node(state:RagDocumentState)->RagDocumentState:
 
     question_route = state["question_route"]
     multi_channel_recall = state.get("multi_channel_recall",[])

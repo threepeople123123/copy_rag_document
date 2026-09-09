@@ -1,11 +1,9 @@
 from pydantic import BaseModel, Field
 
-from pydantic import BaseModel, Field
-
 from core.langfuse import send_message_to_langfuse
 from llm.models import get_structured_agent
 from llm.prompts import build_route_message
-from work_flow.copy_rag_document_state import CopyRagDocumentState
+from work_flow.rag_graph.copy_rag_document_state import RagDocumentState
 
 
 class RouteEnum(BaseModel):
@@ -13,7 +11,7 @@ class RouteEnum(BaseModel):
     route:str=Field(..., description="根据用户问题，进行判断，智能返回三种数据：small_talk,rules_regulations,work_flow")
 
 
-async def intent_node(state:CopyRagDocumentState)->CopyRagDocumentState:
+async def intent_node(state:RagDocumentState)->RagDocumentState:
     question_rewrite = state["question_rewrite"]
 
     history = state.get("history", [])

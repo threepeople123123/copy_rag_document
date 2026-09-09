@@ -9,8 +9,9 @@ from core.logging import get_logger
 from core.redis_client import redis_client
 from llm.models import get_chat_model
 from llm.prompts import build_oa_messages, build_compress_messages
-from work_flow.copy_rag_document_state import Message, CopyRagDocumentState, MessageRole
-from work_flow.graph import get_rag_graph
+from work_flow.rag_graph.copy_rag_document_state import Message, RagDocumentState
+from work_flow.rag_graph.graph import get_rag_graph
+from work_flow.schemas.graph_schemas import MessageRole
 
 _message_adapter = TypeAdapter(list[Message])
 
@@ -29,7 +30,7 @@ class ChatService:
         try:
             history_json = redis_client.get(str(conversation_id))
 
-            update:CopyRagDocumentState = {"question":question}
+            update:RagDocumentState = {"question":question}
             update["conversation_id"] = conversation_id
             await load_content(update)
             megs : list[Message] = []
@@ -64,7 +65,7 @@ class ChatService:
 
 
 
-async def stream_chat(copy_rag_document_state:CopyRagDocumentState)->AsyncIterator[SseIterator]:
+async def stream_chat(copy_rag_document_state:RagDocumentState)->AsyncIterator[SseIterator]:
     history = copy_rag_document_state.get("history", [])
     intent = copy_rag_document_state["intent"]
     chunks = copy_rag_document_state.get("retrieve",[])
@@ -81,7 +82,7 @@ async def stream_chat(copy_rag_document_state:CopyRagDocumentState)->AsyncIterat
             yield ses_data
 
 
-async def load_content(state:CopyRagDocumentState):
+async def load_content(state:RagDocumentState):
     conversation_id = state["conversation_id"]
     history_json = redis_client.get(str(f"chat_history:{conversation_id}"))
 
