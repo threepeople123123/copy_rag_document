@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Literal, TypedDict, dataclass_transform
 
 from pydantic import Field, BaseModel
@@ -28,6 +27,12 @@ class TestCaseDimension(BaseModel):
 
     security:list[DimensionItem] = Field(default_factory=list, description="测试的安全，多个方面，网络方面，字段输入过长亦或者数字输入负数")
 
+class TestCaseDimensionWeb(TestCaseDimension):
+    is_pass:bool = True
+
+    is_remove:bool = True
+
+    supplement:str = ""
 
 
 class TestState(TypedDict, total=False):
@@ -43,6 +48,9 @@ class TestState(TypedDict, total=False):
 
     # 需求结构化
     requirement_structured:list[TestCaseDimension]
+
+    # 前端交互使用
+    return_web_requirement_structured:list[TestCaseDimensionWeb]
 
     # 历史对话
     history:list[Message]

@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph
 
 from core.config import settings
 from core.logging import get_logger
+from work_flow.test_graph.nodes.finally_node import finally_node
 from work_flow.test_graph.nodes.generate_test_node import generate_test_node
 from work_flow.test_graph.nodes.human_node import human_node
 from work_flow.test_graph.nodes.intention_node import intention_node
@@ -53,12 +54,15 @@ def _build_graph():
     builder.add_node("requirement_parser_node", requirement_parser_node)
     builder.add_node("generate_test_node", generate_test_node)
     builder.add_node("human_node", human_node)
+    builder.add_node("finally_node", finally_node)
 
     builder.add_edge(START, "intention_node")
     builder.add_edge("intention_node", "requirement_parser_node")
     builder.add_edge("requirement_parser_node", "generate_test_node")
     builder.add_edge("generate_test_node", "human_node")
-    builder.add_edge("human_node", END)
+    builder.add_edge("human_node", "finally_node")
+    builder.add_edge("finally_node", END)
+
 
     return builder.compile(checkpointer=_build_checkpointer())
 

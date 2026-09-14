@@ -15,4 +15,4 @@ class Message:
 
     content:str
 
-    tool_call_id:str
+    tool_call_id:str = ""
